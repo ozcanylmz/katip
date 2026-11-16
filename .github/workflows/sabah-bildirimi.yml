@@ -1,0 +1,33 @@
+name: Sabah bildirimi
+
+on:
+  schedule:
+    - cron: '30 5 * * *'   # her gün 05:30 UTC = 08:30 Türkiye
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save web-push@3.6.7
+      - name: Bildirimi gönder
+        run: node push.js
+        env:
+          KATIP_PUSH: ${{ secrets.KATIP_PUSH }}
+      # GitHub, 60 gün hareketsiz depolarda zamanlanmış işleri durdurur; ayda bir küçük kayıt bunu önler.
+      - name: Depoyu canlı tut
+        if: github.event_name == 'schedule'
+        run: |
+          if [ "$(date -u +%d)" = "01" ]; then
+            date -u +%F > .canli
+            git config user.name "katip-bot"
+            git config user.email "katip-bot@users.noreply.github.com"
+            git add .canli && git commit -m "canlı tut" && git push || true
+          fi
